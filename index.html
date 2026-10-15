@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlantMatch – plants that will actually survive in your room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="#top">🌿 <span>PlantMatch</span></a>
+  </header>
+
+  <main id="top">
+
+    <section class="hero">
+      <div class="hero-inner">
+        <figure class="hero-card">
+          <img src="hero.jpg" alt="A leafy potted plant">
+        </figure>
+
+        <div class="hero-copy">
+          <h1>
+            <span>Find Plants That</span>
+            <span class="grad">Will Survive Your Room</span>
+          </h1>
+          <p>Tell us about your light, watering habits and space. We rule out the plants that won't make it, then rank the rest by how well they fit.</p>
+          <a class="btn" href="#finder">Start Matching</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="finder-wrap" id="finder">
+      <form class="finder" id="finder-form">
+        <div class="finder-head">
+          <h2>Describe your space</h2>
+          <p>Be honest about your watering. It decides what lives.</p>
+        </div>
+
+        <div id="questions"></div>
+
+        <label class="pets">
+          <input type="checkbox" name="pets">
+          <span>I have pets, so show pet-safe plants only</span>
+        </label>
+
+        <button class="btn" type="submit">Find my plants</button>
+      </form>
+
+      <section class="results" id="results" aria-live="polite" hidden></section>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>PlantMatch · built with plain HTML, CSS and JavaScript</p>
+  </footer>
+
+  <script src="plants.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
