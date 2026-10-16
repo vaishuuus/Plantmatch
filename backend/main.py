@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from recommenders.knowledge import filter_plants, best_relaxation
-from recommenders.scoring import score_plant, explain
+from recommenders.content import content_scores, explain
 
 BASE = Path(__file__).parent
 
@@ -41,10 +41,16 @@ def recommend(answers: Answers):
     passed, rejected = filter_plants(PLANTS, u)    # Stage 1: the bouncer
 
     ranked = []
-    for p in passed:                               # Stage 2 (temporary): the judge
-        s = score_plant(p, u)
-        ranked.append({"plant": p, "score": s["total"], "why": explain(p, u, s["parts"])})
-    ranked.sort(key=lambda r: r["score"], reverse=True)
+    if passed:
+        sims = content_scores(passed, u)           # Stage 2a: cosine similarity
+        for p, s in zip(passed, sims):
+            ranked.append({
+                "plant": p,
+                "score": float(s),
+                "content": float(s),               # kept separately for the Day 4 hybrid blend
+                "why": explain(p, u),
+            })
+        ranked.sort(key=lambda r: r["score"], reverse=True)
 
     result = {"ranked": ranked, "rejected": rejected}
     if not ranked:
