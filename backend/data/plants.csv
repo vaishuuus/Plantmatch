@@ -1,0 +1,29 @@
+id,name,sci,emoji,light_min,light_max,light_ideal,water,humidity,size,effort,pet
+1,Snake Plant,Dracaena trifasciata,🪴,1,3,2,1,1,2,1,0
+2,ZZ Plant,Zamioculcas zamiifolia,🪴,1,3,1,1,1,2,1,0
+3,pothos,Epipremnus aureum,🌿,1,3,2,2,2,2,1,0
+4,Spider Plant,Chlorophytum comosum,🌿,2,3,2,2,2,1,1,1
+5,Peace Lily,Spathiphyllum,🌱,1,2,1,3,3,2,2,0
+6,Cast Iron Plant,Aspidistra elatior,🍃,1,2,1,1,1,2,1,1
+7,Jade Plant,Crassula ovata,🌵,3,3,3,1,1,1,1,0
+8,Aloe Vera,Aloe vera,🌵,3,3,3,1,1,1,1,0
+9,Parlor Palm,Chamaedorea elegans,🌴,1,2,1,2,2,2,1,1
+10,Chinese Evergreen,Aglaonema,🌿,1,2,1,2,2,2,1,0
+11,Rubber Plant,elastic fig,🪴,2,3,2,2,2,3,2,0
+12,Monstera,Monstera Delicious,🍃,2,3,2,2,2,3,2,0
+13,Fiddle Leaf Fig,fig lyrata,🌳,3,3,3,2,2,3,3,0
+14,Boston Fern,Nephrolepis exalted,🌿,2,2,2,3,3,2,3,1
+15,Calathea,Goeppertia,🍃,1,2,2,3,3,2,3,1
+16,Prayer Plant,Maranta leuconeura,🍃,1,2,2,3,3,1,3,1
+17,Haworthia,Haworthiopsis,🌵,2,3,3,1,1,1,1,1
+18,Echeveria,Echeveria,🌵,3,3,3,1,1,1,2,1
+19,Bunny Ear Cactus,Opuntia microdasys,🌵,3,3,3,1,1,1,1,0
+20,Areca Palm,Deeply shining,🌴,2,3,3,2,2,3,2,1
+21,Hearrleaf Philodendron,Philodendron ivy,🌿,1,3,2,2,2,2,1,0
+22,Money Tree,Pachira aquatica,🌳,2,3,2,2,2,2,2,1
+23,African Violet,Streptocarpus ionanthus,🌸,2,3,2,2,3,1,3,1
+24,dracaena,Fragrant Dracaena,🪴,1,3,2,1,1,3,1,0
+25,Ponytail Palm,Beaucarnea recurvata,🌴,3,3,3,1,1,2,1,1
+26,Lucky Bamboo,Dracaena sanderiana,🎍,1,2,1,3,2,1,1,0
+27,Hoya,Hoya carnosa,🌿,2,3,3,1,2,1,2,1
+28,bromeliad,guzmania,🌺,2,3,2,2,3,1,2,1
