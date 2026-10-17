@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import Literal
 
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+import db
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -17,7 +18,11 @@ BASE = Path(__file__).parent
 df = pd.read_csv(BASE / "data" / "plants.csv")
 df["pet"] = df["pet"].astype(bool)
 PLANTS = df.to_dict("records")          # list of dicts, one per plant
-COLLAB = CollaborativeRecommender()     # loads users + ratings once at startup
+PLANT_IDS = {p["id"] for p in PLANTS}
+
+db.init_db()                                    # creates data/plantmatch.db the first time
+COLLAB = CollaborativeRecommender()
+COLLAB.reload(db.load_feedback())               # merge any saved real votes
 
 app = FastAPI(title="PlantMatch API")
 
@@ -70,6 +75,28 @@ def recommend(answers: Answers):
         result["relax"] = best_relaxation(PLANTS, u)
     return result
 
+class Feedback(BaseModel):
+    room_id: str = Field(min_length=6, max_length=64)   # one id per "Find my plants" click
+    plant_id: int
+    liked: bool
+    answers: Answers                                     # the room this vote came from
 
+
+@app.post("/api/feedback")
+def feedback(fb: Feedback):
+    if fb.plant_id not in PLANT_IDS:
+        raise HTTPException(status_code=404, detail="Unknown plant")
+    db.add_feedback(fb.room_id, fb.plant_id, 5 if fb.liked else 1, fb.answers.model_dump())
+    COLLAB.reload(db.load_feedback())                    # the crowd learns right away
+    return {"ok": True, "feedback_ratings": db.count_feedback()}
+
+
+@app.get("/api/stats")
+def stats():
+    return {
+        "simulated_users": COLLAB.n_sim_users,
+        "simulated_ratings": COLLAB.n_sim_ratings,
+        "feedback_ratings": COLLAB.n_feedback,
+    }
 # MUST be last: serves your frontend folder at http://127.0.0.1:8000/
 app.mount("/", StaticFiles(directory=BASE.parent / "frontend", html=True), name="frontend")

@@ -1,8 +1,10 @@
 """
 Stage 2b of the hybrid: COLLABORATIVE filtering (neighborhood-based).
-A new user has no ratings (cold start), so neighbors are found by ROOM-PROFILE
-similarity. Then: predicted rating = what those neighbors thought of each plant.
+Neighbors are found by ROOM-PROFILE similarity (a new user has no ratings yet: cold start).
+Real feedback from the database is merged in as extra users on every reload().
 """
+import threading
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -16,7 +18,7 @@ PROFILE_COLS = ["light", "water", "humidity", "size", "effort"]
 
 
 def profile_vector(u):
-    """Room profile -> vector (light-bulb ruler again). Pets count extra, since they change which plants are OK."""
+    """Room profile -> vector (light-bulb ruler). Pets count extra: they change which plants are OK."""
     vec = []
     for k in PROFILE_COLS:
         vec.extend(thermometer(int(u[k])))
@@ -26,52 +28,78 @@ def profile_vector(u):
 
 class CollaborativeRecommender:
     def __init__(self, k=30):
-        self.k = k                                     # how many neighbors to ask
+        self.k = k                          # how many neighbors to ask
+        self.lock = threading.Lock()        # reload() and predict() can run at the same moment
+        self.reload()
 
+    def reload(self, feedback=None):
+        """(Re)build everything from the CSVs + real feedback (a pandas table from db.load_feedback())."""
         users = pd.read_csv(DATA / "users.csv")
         ratings = pd.read_csv(DATA / "ratings.csv")
+        n_sim_users, n_sim_ratings, n_feedback = len(users), len(ratings), 0
 
-        # profile matrix: one row per past user
-        self.profiles = np.array([profile_vector(r) for r in users.to_dict("records")])
+        if feedback is not None and len(feedback) > 0:
+            fb = feedback.copy()
+            fb["user_id"] = 100000 + pd.factorize(fb["room_id"])[0]   # each search = one new user
+            fb["pets"] = fb["pets"].astype(bool)
+            fb_users = fb.drop_duplicates("user_id")[["user_id"] + PROFILE_COLS + ["pets"]]
+            users = pd.concat([users, fb_users], ignore_index=True)
+            ratings = pd.concat([ratings, fb[["user_id", "plant_id", "rating"]]], ignore_index=True)
+            n_feedback = len(fb)
 
-        # rating matrix R: rows = users, columns = plants, NaN = "never rated"
+        profiles = np.array([profile_vector(r) for r in users.to_dict("records")])
+
         matrix = ratings.pivot(index="user_id", columns="plant_id", values="rating")
-        matrix = matrix.reindex(users["user_id"])      # same row order as the profiles
-        self.col = {pid: i for i, pid in enumerate(matrix.columns)}
-        self.R = matrix.to_numpy(dtype=float)
+        matrix = matrix.reindex(users["user_id"])          # same row order as the profiles
+        R = matrix.to_numpy(dtype=float)                   # NaN = never rated
 
-        self.user_mean = np.nanmean(self.R, axis=1)    # each user's own average (some are generous, some harsh)
-        self.C = self.R - self.user_mean[:, None]      # "centered": rating minus that user's average
-        self.global_mean = float(np.nanmean(self.R))
-        self.item_mean = np.nanmean(self.R, axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            global_mean = float(np.nanmean(R))
+            counts = (~np.isnan(R)).sum(axis=1)
+            # users with 2+ ratings: their own average; users with 1 rating: the global average
+            user_mean = np.where(counts >= 2, np.nanmean(R, axis=1), global_mean)
+            item_mean = np.nanmean(R, axis=0)
+
+        with self.lock:                                    # swap everything in at once
+            self.profiles = profiles
+            self.col = {pid: i for i, pid in enumerate(matrix.columns)}
+            self.R = R
+            self.C = R - user_mean[:, None]                # rating minus the user's own average
+            self.global_mean = global_mean
+            self.item_mean = item_mean
+            self.n_sim_users, self.n_sim_ratings, self.n_feedback = n_sim_users, n_sim_ratings, n_feedback
 
     def predict(self, plants, u):
         """For each plant: community score (0-1), how many neighbors rated it, their average stars."""
-        # 1) who are my neighbors? (most similar rooms)
-        sims = cosine_similarity([profile_vector(u)], self.profiles)[0]
+        with self.lock:
+            profiles, R, C, col = self.profiles, self.R, self.C, self.col
+            global_mean, item_mean = self.global_mean, self.item_mean
+
+        sims = cosine_similarity([profile_vector(u)], profiles)[0]   # who has a room like mine?
         top = np.argsort(sims)[::-1][: self.k]
-        w = sims[top] ** 2                              # closer rooms count more
+        w = sims[top] ** 2                                           # closer rooms count more
 
         out = []
         for p in plants:
-            j = self.col.get(p["id"])
-            if j is None:                               # nobody ever rated this plant
-                out.append({"score": (self.global_mean - 1) / 4, "raters": 0, "avg": None})
+            j = col.get(p["id"])
+            if j is None:                                            # nobody ever rated it
+                out.append({"score": (global_mean - 1) / 4, "raters": 0, "avg": None})
                 continue
 
-            neighbor_dev = self.C[top, j]               # their "above/below own average" for this plant
-            rated = ~np.isnan(neighbor_dev)
+            dev = C[top, j]                                          # neighbors' "above/below own average"
+            rated = ~np.isnan(dev)
 
             if rated.any():
-                dev = (w[rated] * neighbor_dev[rated]).sum() / w[rated].sum()
-                pred = self.global_mean + dev           # weighted-average opinion
-                avg = round(float(np.mean(self.R[top, j][rated])), 2)
-            else:                                       # no neighbor tried it -> fall back to everyone's average
-                pred, avg = self.item_mean[j], None
+                pred = global_mean + (w[rated] * dev[rated]).sum() / w[rated].sum()
+                avg = round(float(np.mean(R[top, j][rated])), 2)
+            else:
+                pred, avg = item_mean[j], None
 
             out.append({
-                "score": float(np.clip((pred - 1) / 4, 0, 1)),   # stars 1-5 -> 0-1
+                "score": float(np.clip((pred - 1) / 4, 0, 1)),      # stars 1-5 -> 0-1
                 "raters": int(rated.sum()),
                 "avg": avg,
             })
         return out
+    

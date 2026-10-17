@@ -159,3 +159,11 @@ h1, h2, h3, p { margin: 0; }
 .bar-track { height: 8px; border-radius: 999px; background: var(--mint-soft); overflow: hidden; }
 .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--leaf), var(--leaf-2)); }
 .bar b { color: var(--forest-dark); text-align: right; }
+
+/* ---------- Feedback buttons ---------- */
+.feedback { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: .82rem; color: var(--muted); }
+.feedback span { flex: 1; }
+.fb-btn { border: 1.5px solid var(--line); background: #fbfefc; border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 1rem; transition: transform .15s, background .15s, border-color .15s; }
+.fb-btn:hover { transform: translateY(-1px); border-color: var(--leaf); }
+.fb-btn.picked { background: var(--forest); border-color: var(--forest); }
+.footer p + p { margin-top: 4px; font-size: .82rem; }

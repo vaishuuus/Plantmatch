@@ -100,12 +100,19 @@ function plantCard(item, i) {
             <b>${pct(item.collab)}%</b></div>
         </div>
         <ul class="why">${item.why.map(t => `<li>${t}</li>`).join("")}</ul>
+        <div class="feedback">
+          <span>Would you grow it?</span>
+          <button class="fb-btn" data-plant="${p.id}" data-liked="1" aria-label="Thumbs up">👍</button>
+          <button class="fb-btn" data-plant="${p.id}" data-liked="0" aria-label="Thumbs down">👎</button>
+        </div>
       </div>
     </article>`;
 }
 
 /* ---------- Draw the results area ---------- */
 async function render(answers) {
+    roomId = newId();
+  lastAnswers = answers;
   resultsEl.hidden = false;
   resultsEl.innerHTML = `<p class="results-head">Finding your plants…</p>`;
 
@@ -150,8 +157,55 @@ async function render(answers) {
   }
 }
 
+/* ---------- Feedback (thumbs up / down) ---------- */
+let roomId = null;       // new id for every "Find my plants" click
+let lastAnswers = null;  // the answers behind the cards on screen
+
+function newId() {
+  return (crypto.randomUUID && crypto.randomUUID()) ||
+         Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+async function loadStats() {
+  try {
+    const s = await (await fetch("/api/stats")).json();
+    document.getElementById("stats").textContent =
+      `Community data: ${s.simulated_users} simulated users · ${s.simulated_ratings} simulated ratings · ${s.feedback_ratings} real ratings`;
+  } catch (e) { /* the footer line is optional */ }
+}
+
+// one listener handles every 👍/👎 button, even ones created later
+resultsEl.addEventListener("click", async function (e) {
+  const btn = e.target.closest(".fb-btn");
+  if (!btn || !roomId) return;
+
+  const row = btn.parentElement;
+  const label = row.querySelector("span");
+  row.querySelectorAll(".fb-btn").forEach(b => b.classList.remove("picked"));
+  btn.classList.add("picked");
+
+  try {
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        room_id: roomId,
+        plant_id: +btn.dataset.plant,
+        liked: btn.dataset.liked === "1",
+        answers: lastAnswers
+      })
+    });
+    if (!res.ok) throw new Error("bad response");
+    label.textContent = "Thanks! Added to the community ratings";
+    loadStats();
+  } catch (err) {
+    label.textContent = "Couldn't save. Is the server running?";
+  }
+});
+
 /* ---------- Start everything ---------- */
 buildQuestions();
+loadStats();
 form.addEventListener("submit", function (e) {
   e.preventDefault();
   render(readPrefs());
