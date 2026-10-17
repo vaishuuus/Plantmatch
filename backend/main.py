@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from recommenders.knowledge import filter_plants, best_relaxation
 from recommenders.content import content_scores, explain
+from recommenders.collaborative import CollaborativeRecommender
 
 BASE = Path(__file__).parent
 
@@ -15,6 +16,7 @@ BASE = Path(__file__).parent
 df = pd.read_csv(BASE / "data" / "plants.csv")
 df["pet"] = df["pet"].astype(bool)
 PLANTS = df.to_dict("records")          # list of dicts, one per plant
+COLLAB = CollaborativeRecommender()     # loads users + ratings once at startup
 
 app = FastAPI(title="PlantMatch API")
 
@@ -37,17 +39,21 @@ def health():
 
 @app.post("/api/recommend")
 def recommend(answers: Answers):
-    u = answers.model_dump()                       # pydantic object -> plain dict
-    passed, rejected = filter_plants(PLANTS, u)    # Stage 1: the bouncer
+    u = answers.model_dump()
+    passed, rejected = filter_plants(PLANTS, u)        # Stage 1: knowledge filter
 
     ranked = []
     if passed:
-        sims = content_scores(passed, u)           # Stage 2a: cosine similarity
-        for p, s in zip(passed, sims):
+        sims = content_scores(passed, u)               # Stage 2a: content-based
+        community = COLLAB.predict(passed, u)          # Stage 2b: collaborative
+        for p, s, c in zip(passed, sims, community):
             ranked.append({
                 "plant": p,
-                "score": float(s),
-                "content": float(s),               # kept separately for the Day 4 hybrid blend
+                "score": float(s),                     # still content only, Day 4 blends the two
+                "content": float(s),
+                "collab": c["score"],
+                "raters": c["raters"],
+                "avg_rating": c["avg"],
                 "why": explain(p, u),
             })
         ranked.sort(key=lambda r: r["score"], reverse=True)
