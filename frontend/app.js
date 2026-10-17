@@ -76,11 +76,12 @@ async function getRecommendations(answers) {
 /* ---------- Draw one plant card ---------- */
 function plantCard(item, i) {
   const p = item.plant;
+  const pct = x => Math.round(x * 100);
   return `
     <article class="plant-card" style="animation-delay:${i * 60}ms">
       <div class="plant-top">
         <span aria-hidden="true">${p.emoji}</span>
-        <span class="score">${Math.round(item.score * 100)}% match</span>
+        <span class="score">${pct(item.score)}% match</span>
       </div>
       <div class="plant-body">
         <h3>${p.name}</h3>
@@ -89,6 +90,14 @@ function plantCard(item, i) {
           <span>☀️ ${LIGHT_WORD[p.light_ideal]}</span>
           <span>💧 ${WATER_WORD[p.water]}</span>
           <span>${EFFORT_WORD[p.effort]}</span>
+        </div>
+        <div class="breakdown">
+          <div class="bar"><span>Fit</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct(item.content)}%"></div></div>
+            <b>${pct(item.content)}%</b></div>
+          <div class="bar"><span>Community</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct(item.collab)}%"></div></div>
+            <b>${pct(item.collab)}%</b></div>
         </div>
         <ul class="why">${item.why.map(t => `<li>${t}</li>`).join("")}</ul>
       </div>

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from recommenders.knowledge import filter_plants, best_relaxation
 from recommenders.content import content_scores, explain
 from recommenders.collaborative import CollaborativeRecommender
+from recommenders.hybrid import blend, community_line
 
 BASE = Path(__file__).parent
 
@@ -45,16 +46,22 @@ def recommend(answers: Answers):
     ranked = []
     if passed:
         sims = content_scores(passed, u)               # Stage 2a: content-based
-        community = COLLAB.predict(passed, u)          # Stage 2b: collaborative
-        for p, s, c in zip(passed, sims, community):
+        crowd = COLLAB.predict(passed, u)              # Stage 2b: collaborative
+        for p, s, c in zip(passed, sims, crowd):
+            final = blend(s, c["score"], c["raters"])  # Stage 3: hybrid blend
+
+            why = explain(p, u)
+            line = community_line(c["raters"], c["avg"])
+            if line:
+                why = [line] + why                     # crowd evidence first
             ranked.append({
                 "plant": p,
-                "score": float(s),                     # still content only, Day 4 blends the two
+                "score": float(final),                 # the hybrid score
                 "content": float(s),
                 "collab": c["score"],
                 "raters": c["raters"],
                 "avg_rating": c["avg"],
-                "why": explain(p, u),
+                "why": why[:3],
             })
         ranked.sort(key=lambda r: r["score"], reverse=True)
 

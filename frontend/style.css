@@ -152,3 +152,10 @@ h1, h2, h3, p { margin: 0; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Score breakdown (hybrid) ---------- */
+.breakdown { display: grid; gap: 8px; margin: 4px 0 14px; }
+.bar { display: grid; grid-template-columns: 84px 1fr 38px; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
+.bar-track { height: 8px; border-radius: 999px; background: var(--mint-soft); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--leaf), var(--leaf-2)); }
+.bar b { color: var(--forest-dark); text-align: right; }
